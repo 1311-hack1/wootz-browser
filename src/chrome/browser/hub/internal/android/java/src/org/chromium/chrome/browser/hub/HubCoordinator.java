@@ -141,8 +141,8 @@ public class HubCoordinator implements PaneHubController, BackPressHandler {
                 .addObserver(castCallback(mBackPressStateChangeCallback));
 
         updateHandleBackPressSupplier();
-        setupViewForHubPaneHostView();
-        setupViewForHubToolbarView();
+        // setupViewForHubPaneHostView();
+        // setupViewForHubToolbarView();
 
         setHubBackgroundColor();
     }
@@ -232,59 +232,59 @@ public class HubCoordinator implements PaneHubController, BackPressHandler {
         return (Callback<T>) callback;
     }
 
-    private void setupViewForHubPaneHostView() {
-        hubPaneHostView.setClipToOutline(true); 
-        hubPaneHostView.setOutlineProvider(new ViewOutlineProvider() {
-            @Override
-            public void getOutline(View view, Outline outline) {
-                float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, view.getResources().getDisplayMetrics());
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+    // private void setupViewForHubPaneHostView() {
+    //     hubPaneHostView.setClipToOutline(true); 
+    //     hubPaneHostView.setOutlineProvider(new ViewOutlineProvider() {
+    //         @Override
+    //         public void getOutline(View view, Outline outline) {
+    //             float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, view.getResources().getDisplayMetrics());
+    //             outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
 
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
-                outline.setConvexPath(createRoundedRectPath(view.getWidth(), view.getHeight(), radius));
-            }
-        });
-    }
+    //             outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+    //             outline.setConvexPath(createRoundedRectPath(view.getWidth(), view.getHeight(), radius));
+    //         }
+    //     });
+    // }
 
-    private void setupViewForHubToolbarView() {
-        hubToolbarView.setClipToOutline(true); 
-        hubToolbarView.setOutlineProvider(new ViewOutlineProvider() {
-            @Override
-            public void getOutline(View view, Outline outline) {
-                float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, view.getResources().getDisplayMetrics());
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+    // private void setupViewForHubToolbarView() {
+    //     hubToolbarView.setClipToOutline(true); 
+    //     hubToolbarView.setOutlineProvider(new ViewOutlineProvider() {
+    //         @Override
+    //         public void getOutline(View view, Outline outline) {
+    //             float radius = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 24, view.getResources().getDisplayMetrics());
+    //             outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
 
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
-                outline.setConvexPath(createRoundedRectPathForHubToolbarView(view.getWidth(), view.getHeight(), radius));
-            }
-        });
-    }
+    //             outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+    //             outline.setConvexPath(createRoundedRectPathForHubToolbarView(view.getWidth(), view.getHeight(), radius));
+    //         }
+    //     });
+    // }
 
-    private android.graphics.Path createRoundedRectPath(int width, int height, float radius) {
-        android.graphics.Path path = new android.graphics.Path();
-        path.moveTo(0, radius); 
-        path.lineTo(0, height); 
-        path.lineTo(width, height); 
-        path.lineTo(width, radius); 
-        path.quadTo(width, 0, width - radius, 0); 
-        path.lineTo(radius, 0);
-        path.quadTo(0, 0, 0, radius);
-        path.close();
-        return path;
-    }
+    // private android.graphics.Path createRoundedRectPath(int width, int height, float radius) {
+    //     android.graphics.Path path = new android.graphics.Path();
+    //     path.moveTo(0, radius); 
+    //     path.lineTo(0, height); 
+    //     path.lineTo(width, height); 
+    //     path.lineTo(width, radius); 
+    //     path.quadTo(width, 0, width - radius, 0); 
+    //     path.lineTo(radius, 0);
+    //     path.quadTo(0, 0, 0, radius);
+    //     path.close();
+    //     return path;
+    // }
     
-    private android.graphics.Path createRoundedRectPathForHubToolbarView(int width, int height, float radius) {
-        android.graphics.Path path = new android.graphics.Path();
-        path.moveTo(0, height - radius);    
-        path.lineTo(0, 0);
-        path.lineTo(width, 0);
-        path.lineTo(width, height-radius);
-        path.quadTo(width, height, width - radius, height);
-        path.lineTo(radius, height);
-        path.quadTo(0, height, 0, height - radius);
-        path.close();
-        return path;
-    }
+    // private android.graphics.Path createRoundedRectPathForHubToolbarView(int width, int height, float radius) {
+    //     android.graphics.Path path = new android.graphics.Path();
+    //     path.moveTo(0, height - radius);    
+    //     path.lineTo(0, 0);
+    //     path.lineTo(width, 0);
+    //     path.lineTo(width, height-radius);
+    //     path.quadTo(width, height, width - radius, height);
+    //     path.lineTo(radius, height);
+    //     path.quadTo(0, height, 0, height - radius);
+    //     path.close();
+    //     return path;
+    // }
 
     private void setHubBackgroundColor() {
         if(mCurrentTabSupplier == null) {
