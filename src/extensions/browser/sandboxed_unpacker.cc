@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <climits>
 #include <set>
 #include <string_view>
 #include <tuple>
@@ -309,7 +310,7 @@ bool SandboxedUnpacker::CreateTempDirectory() {
 void SandboxedUnpacker::StartWithCrx(const CRXFileInfo& crx_info) {
   // We assume that we are started on the thread that the client wants us
   // to do file IO on.
-  LOG(ERROR) << "INSTALLING CRX " << crx_info.extension_id << " " << crx_info.path.AsUTF8Unsafe();
+  LOG(INFO) << "WOOTZ: Installing CRX " << crx_info.extension_id << " " << crx_info.path.AsUTF8Unsafe();
   DCHECK(unpacker_io_task_runner_->RunsTasksInCurrentSequence());
   client_->OnStageChanged(InstallationStage::kVerification);
   std::string expected_hash;
@@ -326,11 +327,16 @@ void SandboxedUnpacker::StartWithCrx(const CRXFileInfo& crx_info) {
   extension_root_ = temp_dir_.GetPath().AppendASCII(kTempExtensionName);
 
   // Extract the public key and validate the package.
+  LOG(INFO) << "WOOTZ: Validating signature" ;
+  LOG(INFO) << "WOOTZ: Crx info path: " << crx_info.path.AsUTF8Unsafe();
+  LOG(INFO) << "WOOTZ: Expected hash: " << expected_hash;
   if (!ValidateSignature(
           crx_info.path, expected_hash,
           format_verifier_override_.value_or(crx_info.required_format))) {
+    LOG(ERROR) << "WOOTZ: Signature validation failed!";
     return;  // ValidateSignature() already reported the error.
   }
+  LOG(INFO) << "WOOTZ: Signature validation passed!";
 
   client_->OnStageChanged(InstallationStage::kCopying);
   // Copy the crx file into our working directory.
@@ -338,6 +344,7 @@ void SandboxedUnpacker::StartWithCrx(const CRXFileInfo& crx_info) {
       temp_dir_.GetPath().Append(crx_info.path.BaseName());
 
   if (!base::CopyFile(crx_info.path, temp_crx_path)) {
+    LOG(ERROR) << "WOOTZ: Failed to copy extension file to temporary directory.";
     // Failed to copy extension file to temporary directory.
     ReportFailure(SandboxedUnpackerFailureReason::
                       FAILED_TO_COPY_EXTENSION_FILE_TO_TEMP_DIRECTORY,

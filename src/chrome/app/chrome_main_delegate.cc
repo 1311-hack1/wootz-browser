@@ -31,12 +31,15 @@
 #include "base/strings/sys_string_conversions.h"
 #include "base/strings/utf_string_conversions.h"
 #include "base/task/thread_pool/thread_pool_instance.h"
+#include "base/task/thread_pool.h"
 #include "base/threading/hang_watcher.h"
 #include "base/time/time.h"
 #include "base/timer/timer.h"
 #include "base/trace_event/trace_event_impl.h"
 #include "build/build_config.h"
 #include "build/chromeos_buildflags.h"
+#include "content/public/browser/browser_task_traits.h"
+#include "content/public/browser/browser_thread.h"
 #include "chrome/browser/buildflags.h"
 #include "chrome/browser/chrome_content_browser_client.h"
 #include "chrome/browser/chrome_resource_bundle_helper.h"
@@ -245,6 +248,10 @@
 #include "chrome/browser/chrome_browser_main_extra_parts_linux.h"
 #endif
 #endif  // BUILDFLAG(IS_OZONE)
+
+#include "chrome/browser/extensions/bundled_extension_util.h"
+#include "extensions/grit/extensions_resources.h"
+#include "ui/base/resource/resource_bundle.h"
 
 base::LazyInstance<ChromeContentGpuClient>::DestructorAtExit
     g_chrome_content_gpu_client = LAZY_INSTANCE_INITIALIZER;
@@ -1619,148 +1626,22 @@ void ChromeMainDelegate::PreSandboxStartup() {
 
   if (SubprocessNeedsResourceBundle(process_type)) {
     // Initialize ResourceBundle which handles files loaded from external
-    // sources.  The language should have been passed in to us from the
+    // sources. The language should have been passed in to us from the
     // browser process as a command line flag.
-#if !BUILDFLAG(ENABLE_NACL)
-    DUMP_WILL_BE_CHECK(command_line.HasSwitch(switches::kLang) ||
-                       process_type == switches::kZygoteProcess ||
-                       process_type == switches::kGpuProcess ||
-                       process_type == switches::kPpapiPluginProcess);
-#else
-    DUMP_WILL_BE_CHECK(command_line.HasSwitch(switches::kLang) ||
-                       process_type == switches::kZygoteProcess ||
-                       process_type == switches::kGpuProcess ||
-                       process_type == switches::kNaClLoaderProcess ||
-                       process_type == switches::kPpapiPluginProcess);
-#endif
-
-    // TODO(markusheintz): The command line flag --lang is actually processed
-    // by the CommandLinePrefStore, and made available through the PrefService
-    // via the preference prefs::kApplicationLocale. The browser process uses
-    // the --lang flag to pass the value of the PrefService in here. Maybe
-    // this value could be passed in a different way.
-    std::string locale = command_line.GetSwitchValueASCII(switches::kLang);
-#if BUILDFLAG(IS_CHROMEOS_ASH)
-    if (process_type == switches::kZygoteProcess) {
-      DUMP_WILL_BE_CHECK(locale.empty());
-      // See comment at ReadAppLocale() for why we do this.
-      locale = ash::startup_settings_cache::ReadAppLocale();
-    }
-
-    ui::ResourceBundle::SetLottieParsingFunctions(
-        &lottie::ParseLottieAsStillImage,
-        &lottie::ParseLottieAsThemedStillImage);
-#endif
-#if BUILDFLAG(IS_ANDROID)
-    // The renderer sandbox prevents us from accessing our .pak files directly.
-    // Therefore file descriptors to the .pak files that we need are passed in
-    // at process creation time.
-    auto* global_descriptors = base::GlobalDescriptors::GetInstance();
-    int pak_fd = global_descriptors->Get(kAndroidLocalePakDescriptor);
-    base::MemoryMappedFile::Region pak_region =
-        global_descriptors->GetRegion(kAndroidLocalePakDescriptor);
-    ui::ResourceBundle::InitSharedInstanceWithPakFileRegion(base::File(pak_fd),
-                                                            pak_region);
-
-    // Load secondary locale .pak file if it exists.
-    pak_fd = global_descriptors->MaybeGet(kAndroidSecondaryLocalePakDescriptor);
-    if (pak_fd != -1) {
-      pak_region =
-          global_descriptors->GetRegion(kAndroidSecondaryLocalePakDescriptor);
-      ui::ResourceBundle::GetSharedInstance()
-          .LoadSecondaryLocaleDataWithPakFileRegion(base::File(pak_fd),
-                                                    pak_region);
-    }
-
-    int extra_pak_keys[] = {
-        kAndroidChrome100PercentPakDescriptor,
-        kAndroidUIResourcesPakDescriptor,
-    };
-    for (int extra_pak_key : extra_pak_keys) {
-      pak_fd = global_descriptors->Get(extra_pak_key);
-      pak_region = global_descriptors->GetRegion(extra_pak_key);
-      ui::ResourceBundle::GetSharedInstance().AddDataPackFromFileRegion(
-          base::File(pak_fd), pak_region, ui::k100Percent);
-    }
-
-    // For Android: Native resources for DFMs should only be used by the browser
-    // process. Their file descriptors and memory mapped file region are not
-    // passed to child processes, and are therefore not loaded here.
-
-    base::i18n::SetICUDefaultLocale(locale);
-    const std::string loaded_locale = locale;
-#else
-    const std::string loaded_locale =
-        ui::ResourceBundle::InitSharedInstanceWithLocale(
-            locale, nullptr, ui::ResourceBundle::LOAD_COMMON_RESOURCES);
-
-    base::FilePath resources_pack_path;
-    base::PathService::Get(chrome::FILE_RESOURCES_PACK, &resources_pack_path);
-#if BUILDFLAG(IS_CHROMEOS_LACROS)
-    if (command_line.HasSwitch(switches::kEnableResourcesFileSharing)) {
-      // If LacrosResourcesFileSharing feature is enabled, Lacros refers to ash
-      // resources pak file.
-      base::FilePath ash_resources_pack_path;
-      base::PathService::Get(chrome::FILE_ASH_RESOURCES_PACK,
-                             &ash_resources_pack_path);
-      base::FilePath shared_resources_pack_path;
-      base::PathService::Get(chrome::FILE_RESOURCES_FOR_SHARING_PACK,
-                             &shared_resources_pack_path);
-      ui::ResourceBundle::GetSharedInstance()
-          .AddDataPackFromPathWithAshResources(
-              shared_resources_pack_path, ash_resources_pack_path,
-              resources_pack_path, ui::kScaleFactorNone);
-    } else {
-      ui::ResourceBundle::GetSharedInstance().AddDataPackFromPath(
-          resources_pack_path, ui::kScaleFactorNone);
-    }
-#else
-    ui::ResourceBundle::GetSharedInstance().AddDataPackFromPath(
-        resources_pack_path, ui::kScaleFactorNone);
-#endif  // BUILDFLAG(IS_CHROMEOS_LACROS)
-#endif  // BUILDFLAG(IS_ANDROID)
-    CHECK(!loaded_locale.empty()) << "Locale could not be found for " << locale;
   }
 
-#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
-  // Zygote needs to call InitCrashReporter() in RunZygote().
-  if (process_type != switches::kZygoteProcess) {
-    if (command_line.HasSwitch(switches::kPreCrashpadCrashTest)) {
-      // Crash for the purposes of testing the handling of crashes that happen
-      // before crashpad is initialized. Please leave this check immediately
-      // before the crashpad initialization; the amount of memory used at this
-      // point is important to the test.
-      base::ImmediateCrash();
-    }
-#if BUILDFLAG(IS_ANDROID)
-    crash_reporter::InitializeCrashpad(process_type.empty(), process_type);
-    if (process_type.empty()) {
-      base::android::InitJavaExceptionReporter();
-      UninstallPureJavaExceptionHandler();
-    } else {
-      base::android::InitJavaExceptionReporterForChildProcess();
-    }
-#else
-    crash_reporter::InitializeCrashpad(process_type.empty(), process_type);
-    crash_reporter::SetFirstChanceExceptionHandler(
-        v8::TryHandleWebAssemblyTrapPosix);
-#endif  // BUILDFLAG(IS_ANDROID)
-  }
-#endif  // BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
-
-#if BUILDFLAG(IS_ANDROID)
-  CHECK_EQ(base::android::GetLibraryProcessType(),
-           process_type.empty() ? base::android::PROCESS_BROWSER
-                                : base::android::PROCESS_CHILD);
-#endif  // BUILDFLAG(IS_ANDROID)
-
-  // After all the platform Breakpads have been initialized, store the command
-  // line for crash reporting.
-  crash_keys::SetCrashKeysFromCommandLine(command_line);
-
-#if BUILDFLAG(ENABLE_PDF)
-  MaybePatchGdiGetFontData();
-#endif
+  // // Make sure we're on the main thread and ResourceBundle is initialized
+  // if (process_type.empty()) {  // Only in browser process
+  //   base::ThreadPool::PostTask(
+  //       FROM_HERE,
+  //       base::BindOnce([]() {
+  //         if (ui::ResourceBundle::HasSharedInstance()) {
+  //           bundled_extension_util::ExtractBundledExtension();
+  //         } else {
+  //           LOG(ERROR) << "ResourceBundle not initialized in UI thread";
+  //         }
+  //       }));
+  // }
 }
 
 void ChromeMainDelegate::SandboxInitialized(const std::string& process_type) {

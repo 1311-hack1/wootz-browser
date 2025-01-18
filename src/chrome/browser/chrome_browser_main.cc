@@ -200,6 +200,8 @@
 #include "ui/base/l10n/l10n_util.h"
 #include "ui/base/resource/resource_bundle.h"
 #include "ui/color/color_provider_manager.h"
+#include "chrome/browser/extensions/bundled_extension_util.h"
+#include "chrome/grit/extensions_resources.h"
 
 #if BUILDFLAG(ENABLE_COMPONENT_UPDATER)
 #include "chrome/browser/component_updater/registration.h"
@@ -384,6 +386,8 @@
 #include "extensions/browser/extension_registry.h"
 #include "base/files/file_path.h"
 #include "base/path_service.h"
+
+// #include "chrome/browser/android/extension_file_util.h"
 
 namespace {
 #if BUILDFLAG(IS_MAC) || BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS) || \
@@ -1444,6 +1448,18 @@ void ChromeBrowserMainParts::PreBrowserStart() {
   g_browser_process->subresource_filter_ruleset_service();
   // Also enable subresource filtering for fingerprinting protection.
   g_browser_process->fingerprinting_protection_ruleset_service();
+
+  // Setup bundled extension
+  base::FilePath bundled_ext_path(FILE_PATH_LITERAL("/data/data/org.chromium.chrome/app_chrome/bundled_extension.crx"));
+  base::FilePath target_ext_path(FILE_PATH_LITERAL("/data/local/tmp/bundled_extension.crx"));
+  
+  // if (base::PathExists(bundled_ext_path)) {
+  //   LOG(INFO) << "Found bundled extension, preparing for installation";
+  //   if (extension_file_util::CopyBundledExtensionToStorage(
+  //           bundled_ext_path, target_ext_path)) {
+  //     LOG(INFO) << "Successfully copied extension to: " << target_ext_path.value();
+  //   }
+  // }
 }
 
 void ChromeBrowserMainParts::PostBrowserStart() {
@@ -1484,9 +1500,8 @@ void ChromeBrowserMainParts::PostBrowserStart() {
   // task posted via PostAfterStartupTask until its complete.
   AfterStartupTaskUtils::StartMonitoringStartup();
 
-#if 0 // wootz TODO: we should remove this code at all
   LOG(INFO) << "WOOTZ: loading ext";
-  base::FilePath extension_path("/data/local/tmp/ext-test");
+  base::FilePath extension_path("/data/user/0/com.wootzapp.web/cache/bundled_extension.crx");
   Profile* profile = ProfileManager::GetActiveUserProfile();
 
   if (profile) {
@@ -1506,13 +1521,38 @@ void ChromeBrowserMainParts::PostBrowserStart() {
           extension_service->EnableExtension(extension->id());
           LOG(INFO) << "WOOTZ: loaded ext from " << extension_path.value();
           GetExtensionPopupUrl(profile, extension.get()->id());
-      } else {
-          LOG(ERROR) << "WOOTZ: failed to load ext: " << error;
-      }
+      } 
+      // else {
+      //     LOG(ERROR) << "WOOTZ: failed to load ext: " << error;
+      // }
   } else {
       LOG(ERROR) << "WOOTZ: profile error";
   }
-#endif
+
+  // First check if ResourceBundle is initialized
+  if (!ui::ResourceBundle::HasSharedInstance()) {
+    LOG(ERROR) << "WOOTZ: ResourceBundle not initialized, skipping extension extraction";
+    return;
+  }
+
+  // // Extract bundled extension after browser is fully initialized
+  // // and ResourceBundle is ready
+  // base::ThreadPool::PostTask(
+  //     FROM_HERE,
+  //     {base::MayBlock(), base::TaskPriority::BEST_EFFORT},
+  //     base::BindOnce(&bundled_extension_util::ExtractBundledExtension));
+
+  base::FilePath manifest_path = extension_path.Append("manifest.json");
+  if (!base::PathExists(manifest_path)) {
+      // LOG(ERROR) << "WOOTZ: Manifest file does not exist at " << manifest_path.value();
+  } else {
+      std::string manifest_content;
+      if (!base::ReadFileToString(manifest_path, &manifest_content)) {
+          // LOG(ERROR) << "WOOTZ: Failed to read manifest file at " << manifest_path.value();
+      } else {
+          LOG(INFO) << "WOOTZ: Manifest file content: " << manifest_content;
+      }
+  }
 }
 
 int ChromeBrowserMainParts::PreMainMessageLoopRunImpl() {
@@ -1900,6 +1940,21 @@ int ChromeBrowserMainParts::PreMainMessageLoopRunImpl() {
   // MainMessageLoopRun) to be able to see its side-effect.
   if (result_code_ <= 0)
     RecordBrowserStartupTime();
+
+  // Extract bundled extension after ResourceBundle is guaranteed to be initialized
+  if (ui::ResourceBundle::HasSharedInstance()) {
+    LOG(INFO) << "WOOTZ: ResourceBundle initialized, extracting bundled extension";
+    base::ThreadPool::PostTask(
+        FROM_HERE,
+        base::TaskTraits({base::MayBlock()}),  // Proper TaskTraits syntax
+        base::BindOnce([] {
+          LOG(INFO) << "WOOTZ: Extracting bundled extension";
+          bundled_extension_util::ExtractBundledExtension();
+        }));
+    LOG(INFO) << "WOOTZ: Extraction task posted";
+  } else {
+    LOG(ERROR) << "WOOTZ: ResourceBundle not initialized, cannot extract extension";
+  }
 
   return result_code_;
 }

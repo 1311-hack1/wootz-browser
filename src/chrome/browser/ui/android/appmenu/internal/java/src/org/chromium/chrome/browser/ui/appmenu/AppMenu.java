@@ -47,6 +47,7 @@ import androidx.annotation.VisibleForTesting;
 
 import org.chromium.chrome.browser.extensions.ExtensionInfo;
 import org.chromium.chrome.browser.extensions.Extensions;
+import org.chromium.chrome.browser.ntp.NewTabPageLayout;
 import org.chromium.base.ContextUtils;
 import org.chromium.components.embedder_support.view.ContentView;
 import org.chromium.components.thinwebview.ThinWebView;
@@ -542,6 +543,11 @@ public class AppMenu extends BottomSheetDialogFragment implements OnItemClickLis
         // Extensions.getExtensionsInfo().remove(extensionIndex);
         String extensionId = Extensions.getExtensionsInfo().get(extensionIndex).getId();
         Log.d(TAG,"Deleting extension " + extensionId);
+        // NewTabPageLayout ntpLayout = (NewTabPageLayout) getActivity().findViewById(R.id.ntp_content);
+        // if (ntpLayout != null) {
+        //     Log.d(TAG,"Cleaning up web contents");
+        //     ntpLayout.cleanupWebContents();
+        // }
         Extensions.uninstallExtension(extensionId);
         createExtensionsRow();
     }

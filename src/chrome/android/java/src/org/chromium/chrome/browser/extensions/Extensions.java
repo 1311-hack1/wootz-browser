@@ -10,6 +10,10 @@ import org.json.JSONObject;
 import java.util.List;
 import java.util.ArrayList;
 
+import org.chromium.chrome.browser.app.ChromeActivity;
+import org.chromium.chrome.browser.ntp.NewTabPageLayout;
+import org.chromium.chrome.R;
+
 import org.jni_zero.CalledByNative;
 import org.jni_zero.NativeMethods;
 
@@ -46,6 +50,7 @@ public class Extensions {
     }
 
     public static void uninstallExtension(String extensionId) {
+        Log.d("Extensions", "Uninstalling extension with id: " + extensionId);
         ExtensionsJni.get().uninstallExtension(extensionId);
     }
 

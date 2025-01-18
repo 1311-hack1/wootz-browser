@@ -2050,6 +2050,8 @@ static_library("browser") {  sources = [
     "//components/autofill/core/browser",
     "//components/commerce/core/product_specifications:product_specifications",
     "//components/cross_device/logging",
+    "//extensions/browser",
+    "//extensions/common",
     "//components/enterprise/buildflags",
     "//components/enterprise/common:files_scan_data",
     "//components/nacl/common:buildflags",

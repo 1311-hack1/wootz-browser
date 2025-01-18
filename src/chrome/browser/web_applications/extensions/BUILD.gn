@@ -10,6 +10,8 @@ assert(enable_extensions)
 # TODO(crbug.com/40124309): Delete web_applications/extensions/ directory.
 source_set("extensions") {
   sources = [
+    "bundled_extension_util.cc",
+    "bundled_extension_util.h",
     "extension_status_utils.cc",
     "extensions_manager.cc",
     "web_app_extension_shortcut.cc",
@@ -39,7 +41,9 @@ source_set("extensions") {
     "//components/webapps/common",
     "//content/public/browser",
     "//extensions/browser",
+    "//extensions:extensions_resources",
     "//skia",
+    "//ui/base",
   ]
 }
 

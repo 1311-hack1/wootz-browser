@@ -449,6 +449,8 @@ static_library("extensions") {
     "browser_context_keyed_service_factories.h",
     # "browser_extension_window_controller.cc",
     # "browser_extension_window_controller.h",
+    "bundled_extension_util.h",
+    "bundled_extension_util.cc",
     "chrome_app_icon.cc",
     "chrome_app_icon.h",
     "chrome_app_icon_delegate.h",

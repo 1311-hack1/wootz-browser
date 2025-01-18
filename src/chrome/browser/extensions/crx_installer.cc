@@ -91,8 +91,9 @@ scoped_refptr<CrxInstaller> CrxInstaller::CreateSilent(
 scoped_refptr<CrxInstaller> CrxInstaller::Create(
     ExtensionService* frontend,
     std::unique_ptr<ExtensionInstallPrompt> client) {
+  LOG(INFO) << "WOOTZ: CrxInstaller::Create called with approval: no";
   return new CrxInstaller(frontend->AsExtensionServiceWeakPtr(),
-                          std::move(client), nullptr); 
+                         std::move(client), nullptr); 
 }
 
 // static
@@ -100,6 +101,8 @@ scoped_refptr<CrxInstaller> CrxInstaller::Create(
     ExtensionService* service,
     std::unique_ptr<ExtensionInstallPrompt> client,
     const WebstoreInstaller::Approval* approval) {
+  LOG(INFO) << "WOOTZ: CrxInstaller::Create called with approval: " 
+            << (approval ? "yes" : "no");
   return new CrxInstaller(service->AsExtensionServiceWeakPtr(),
                           std::move(client), approval);
 }
@@ -130,19 +133,25 @@ CrxInstaller::CrxInstaller(base::WeakPtr<ExtensionService> service_weak,
       shared_file_task_runner_(GetExtensionFileTaskRunner()),
       update_from_settings_page_(false),
       install_flags_(kInstallFlagNone) {
+  LOG(INFO) << "WOOTZ: CrxInstaller constructor called";
   profile_observation_.Observe(profile_);
 
-  if (!approval)
+  if (!approval){
+    LOG(ERROR) << "WOOTZ: No approval provided, returning!";
     return;
+  }
+  LOG(INFO) << "WOOTZ: Approval provided, continuing!";
 
   CHECK(profile()->IsSameOrParent(approval->profile));
   if (client_) {
+    LOG(INFO) << "WOOTZ: Client_ is not null";
     client_->install_ui()->SetUseAppInstalledBubble(
         approval->use_app_installed_bubble);
     client_->install_ui()->SetSkipPostInstallUI(approval->skip_post_install_ui);
   }
 
   if (approval->skip_install_dialog) {
+    LOG(INFO) << "WOOTZ: Approval->skip_install_dialog is true";
     // Mark the extension as approved, but save the expected manifest and ID
     // so we can check that they match the CRX's.
     approved_ = true;
@@ -164,6 +173,7 @@ CrxInstaller::CrxInstaller(base::WeakPtr<ExtensionService> service_weak,
 }
 
 CrxInstaller::~CrxInstaller() {
+  LOG(INFO) << "WOOTZ: CrxInstaller destructor called";
   DCHECK(!service_weak_ || service_weak_->browser_terminating() ||
          installer_callbacks_.empty());
   DCHECK_CURRENTLY_ON(BrowserThread::UI);
@@ -174,6 +184,7 @@ CrxInstaller::~CrxInstaller() {
 }
 
 void CrxInstaller::InstallCrx(const base::FilePath& source_file) {
+  LOG(INFO) << "WOOTZ: CrxInstaller::InstallCrx called";
   crx_file::VerifierFormat format =
       off_store_install_allow_reason_ == OffStoreInstallDisallowed
           ? GetWebstoreVerifierFormat(
@@ -184,6 +195,7 @@ void CrxInstaller::InstallCrx(const base::FilePath& source_file) {
 }
 
 void CrxInstaller::InstallCrxFile(const CRXFileInfo& source_file) {
+  LOG(INFO) << "WOOTZ: CrxInstaller::InstallCrxFile called";
   ExtensionService* service = service_weak_.get();
   if (!service || service->browser_terminating())
     return;
@@ -206,6 +218,7 @@ void CrxInstaller::InstallCrxFile(const CRXFileInfo& source_file) {
 void CrxInstaller::InstallUnpackedCrx(const ExtensionId& extension_id,
                                       const std::string& public_key,
                                       const base::FilePath& unpacked_dir) {
+  LOG(INFO) << "WOOTZ: CrxInstaller::InstallUnpackedCrx called";
   ExtensionService* service = service_weak_.get();
   if (!service || service->browser_terminating())
     return;
@@ -529,6 +542,11 @@ void CrxInstaller::OnUnpackSuccess(
     const Extension* extension,
     const SkBitmap& install_icon,
     declarative_net_request::RulesetInstallPrefs ruleset_install_prefs) {
+  LOG(INFO) << "WOOTZ: OnUnpackSuccess called";
+  LOG(INFO) << "WOOTZ: Extension dir: " << extension_dir.value();
+  LOG(INFO) << "WOOTZ: Extension ID: " << extension->id();
+  LOG(INFO) << "WOOTZ: Extension version: " << extension->version().GetString();
+
   DCHECK(GetUnpackerTaskRunner()->RunsTasksInCurrentSequence());
   shared_file_task_runner_->PostTask(
       FROM_HERE,
@@ -963,20 +981,26 @@ void CrxInstaller::ReloadExtensionAfterInstall(
 
 void CrxInstaller::ReportFailureFromSharedFileThread(
     const CrxInstallError& error) {
+      LOG(ERROR) << "WOOTZ: ReportFailureFromSharedFileThread called";
   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
   if (!content::GetUIThreadTaskRunner({})->PostTask(
           FROM_HERE, base::BindOnce(&CrxInstaller::ReportFailureFromUIThread,
                                     this, error))) {
+    LOG(ERROR) << "WOOTZ: Failed to post task to UI thread";
     NOTREACHED_IN_MIGRATION();
   }
 }
 
 void CrxInstaller::ReportFailureFromUIThread(const CrxInstallError& error) {
+  LOG(ERROR) << "WOOTZ: Installation failed with error" << error.message();
+  
   DCHECK_CURRENTLY_ON(BrowserThread::UI);
   DCHECK_NE(CrxInstallErrorType::NONE, error.type());
 
-  if (!service_weak_.get() || service_weak_->browser_terminating())
+  if (!service_weak_.get() || service_weak_->browser_terminating()) {
+    LOG(ERROR) << "WOOTZ: Service is null or browser is terminating";
     return;
+  }
 
   // This isn't really necessary, it is only used because unit tests expect to
   // see errors get reported via this interface.
@@ -996,6 +1020,7 @@ void CrxInstaller::ReportFailureFromUIThread(const CrxInstallError& error) {
 }
 
 void CrxInstaller::ReportSuccessFromSharedFileThread() {
+  LOG(ERROR) << "WOOTZ: ReportSuccessFromSharedFileThread called";
   DCHECK(shared_file_task_runner_->RunsTasksInCurrentSequence());
 
   // Tracking number of extensions installed by users
@@ -1042,6 +1067,7 @@ void CrxInstaller::ReportSuccessFromUIThread() {
 }
 
 void CrxInstaller::ReportInstallationStage(InstallationStage stage) {
+  LOG(ERROR) << "WOOTZ: ReportInstallationStage called";
   if (!BrowserThread::CurrentlyOn(BrowserThread::UI)) {
     DCHECK(GetUnpackerTaskRunner()->RunsTasksInCurrentSequence() ||
            shared_file_task_runner_->RunsTasksInCurrentSequence());
@@ -1065,6 +1091,7 @@ void CrxInstaller::ReportInstallationStage(InstallationStage stage) {
 }
 
 void CrxInstaller::NotifyCrxInstallBegin() {
+  LOG(ERROR) << "WOOTZ: NotifyCrxInstallBegin called";
   profile_keep_alive_ = std::make_unique<ScopedProfileKeepAlive>(
       profile_, ProfileKeepAliveOrigin::kCrxInstaller);
 
@@ -1074,6 +1101,7 @@ void CrxInstaller::NotifyCrxInstallBegin() {
 
 void CrxInstaller::NotifyCrxInstallComplete(
     const std::optional<CrxInstallError>& error) {
+  LOG(ERROR) << "WOOTZ: NotifyCrxInstallComplete called";
   ReportInstallationStage(InstallationStage::kComplete);
   const ExtensionId extension_id =
       expected_id_.empty() && extension() ? extension()->id() : expected_id_;
@@ -1126,6 +1154,7 @@ void CrxInstaller::NotifyCrxInstallComplete(
 }
 
 void CrxInstaller::CleanupTempFiles() {
+  LOG(ERROR) << "WOOTZ: CleanupTempFiles called";
   if (!shared_file_task_runner_->RunsTasksInCurrentSequence()) {
     if (!shared_file_task_runner_->PostTask(
             FROM_HERE, base::BindOnce(&CrxInstaller::CleanupTempFiles, this))) {

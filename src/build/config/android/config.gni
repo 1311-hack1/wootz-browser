@@ -224,7 +224,7 @@ if (is_android || is_chromeos) {
 
     # Forced Android versionCode
 
-    android_override_version_code = "24"
+    android_override_version_code = "26"
 
     # Forced Android versionName
     android_override_version_name = "0.23"

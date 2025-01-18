@@ -182,6 +182,16 @@
 #include "services/screen_ai/buildflags/buildflags.h"
 #include "services/service_manager/public/cpp/service.h"
 #include "ui/base/l10n/l10n_util.h"
+#include "chrome/browser/extensions/bundled_extension_util.h"
+#include "extensions/browser/extension_system.h"
+#include "extensions/common/extension.h"
+#include "extensions/browser/extension_system.h"
+#include "extensions/browser/extension_registry.h"
+#include "chrome/browser/extensions/crx_installer.h"
+#include "extensions/browser/extension_system.h"
+#include "chrome/browser/extensions/extension_install_prompt.h"
+#include "chrome/browser/extensions/webstore_installer.h"
+#include "chrome/browser/extensions/webstore_installer.cc"
 
 #if BUILDFLAG(IS_CHROMEOS_ASH)
 #include "chrome/browser/app_mode/app_mode_utils.h"
@@ -888,6 +898,73 @@ void ProfileImpl::DoFinalInit(CreateMode create_mode) {
   // OriginTrialsControllerDelegate, as it depends on it.
   tpcd::trial::TpcdTrialServiceFactory::GetForProfile(this);
   tpcd::trial::TopLevelTrialServiceFactory::GetForProfile(this);
+
+  // Add a delay before attempting to get extension path
+  content::GetUIThreadTaskRunner({})->PostDelayedTask(
+      FROM_HERE,
+      base::BindOnce([](Profile* profile) {
+          LOG(INFO) << "WOOTZ: Attempting to get extension path after delay";
+          base::FilePath extension_path = bundled_extension_util::GetBundledExtensionPath();
+          if (!extension_path.empty()) {
+              LOG(INFO) << "WOOTZ: Found extension path: " << extension_path.value();
+              extensions::ExtensionSystem* extension_system = 
+                  extensions::ExtensionSystem::Get(profile);
+              if (extension_system && extension_system->extension_service()) {
+                  LOG(INFO) << "WOOTZ: Extension system and service found";
+                  
+                  std::unique_ptr<extensions::WebstoreInstaller::Approval> approval(
+                      extensions::WebstoreInstaller::Approval::CreateWithNoInstallPrompt(
+                          profile,
+                          "extension_id",  // Will be determined from manifest
+                          base::Value::Dict(),
+                          true));  // Skip post install UI
+
+                  approval->skip_install_dialog = true;
+                  approval->skip_post_install_ui = true;
+                  approval->use_app_installed_bubble = false;
+                  approval->manifest_check_level = 
+                      extensions::WebstoreInstaller::MANIFEST_CHECK_LEVEL_NONE;
+
+                  // Create the installer with no prompt
+                  scoped_refptr<extensions::CrxInstaller> installer =
+                      extensions::CrxInstaller::Create(
+                          extension_system->extension_service(),
+                          nullptr,  // No prompt needed for silent install
+                          approval.get());
+
+                  LOG(INFO) << "WOOTZ: CrxInstaller created";
+                  installer->set_allow_silent_install(true);
+                  installer->set_error_on_unsupported_requirements(true);
+                  installer->set_delete_source(true);
+                  installer->set_install_cause(extension_misc::INSTALL_CAUSE_USER_DOWNLOAD);
+                  installer->set_apps_require_extension_mime_type(true);
+                  installer->set_install_immediately(true);
+                  LOG(INFO) << "WOOTZ: Installing extension";
+                  installer->InstallCrx(extension_path);
+
+                  // Log all installed extensions
+                  extensions::ExtensionRegistry* registry =
+                      extensions::ExtensionRegistry::Get(profile);
+                  if (registry) {
+                      LOG(INFO) << "WOOTZ: Listing all enabled extensions:";
+                      const extensions::ExtensionSet& extensions = 
+                          registry->enabled_extensions();
+                      for (const auto& extension : extensions) {
+                          LOG(INFO) << "WOOTZ: Extension ID: " << extension->id()
+                                  << ", Name: " << extension->name()
+                                  << ", Location: " << extension->location()
+                                  << ", Path: " << extension->path().value();
+                      }
+                      
+                  } else {
+                      LOG(ERROR) << "WOOTZ: Could not get extension registry";
+                  }
+              }
+          } else {
+              LOG(ERROR) << "WOOTZ: Extension path is empty after delay";
+          }
+      }, base::Unretained(this)),
+      base::Seconds(2));  // 2 second delay
 }
 
 base::FilePath ProfileImpl::last_selected_directory() {
