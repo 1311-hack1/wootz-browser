@@ -32,6 +32,9 @@ import androidx.annotation.Nullable;
 import androidx.annotation.VisibleForTesting;
 import androidx.appcompat.content.res.AppCompatResources;
 import androidx.core.widget.NestedScrollView;
+import androidx.cardview.widget.CardView;
+import android.widget.Button;
+import android.widget.TextView;
 
 import org.chromium.base.Callback;
 import org.chromium.base.CallbackController;
@@ -185,6 +188,8 @@ public class NewTabPageLayout extends LinearLayout {
     private @LogoSizeForLogoPolish int mLogoSizeForLogoPolish;
     private View mFakeSearchBoxLayout;
     private Callback<Logo> mOnLogoAvailableCallback;
+    private View mExtensionStoreContainer;
+    private Button mExtensionStoreButton;
 
     /** Constructor for inflating from XML. */
     public NewTabPageLayout(Context context, AttributeSet attrs) {

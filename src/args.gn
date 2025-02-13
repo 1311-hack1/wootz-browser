@@ -3,6 +3,7 @@ target_cpu = "arm64"
 enable_cardboard = false
 enable_proguard_obfuscation = false
 enable_hls_demuxer = false
+is_debug = true
 enable_nacl = false
 proprietary_codecs = true
 ffmpeg_branding = "Chrome"

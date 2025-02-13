@@ -465,7 +465,7 @@ public class AppMenu extends BottomSheetDialogFragment
         addExtensionButton.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         addExtensionButton
                 .setImageTintList(AppCompatResources.getColorStateList(context, R.color.extension_icon_color));
-        addExtensionButton.setOnClickListener(v -> openWebsite("https://github.com/wootzapp/ext-store"));
+        addExtensionButton.setOnClickListener(v -> openWebsite("wootzapp://extension-store/"));
         extensionsContainer.addView(addExtensionButton);
 
         for (int i = 0; i < extensionCount; i++) {

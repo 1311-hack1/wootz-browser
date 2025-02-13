@@ -55,7 +55,7 @@ public class Extensions {
     }
 
     public static boolean isUrlfromOfficialStore(String url) {
-        return url.contains("github.com/wootzapp/ext-store");
+        return true;
     }
 
     public static void installExtension(String url) {

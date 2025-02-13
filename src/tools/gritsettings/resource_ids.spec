@@ -1328,6 +1328,10 @@
     "includes": [8460],
   },
 
+  "chrome/browser/resources/extension_store/dist/extension_store_resources.grd": {
+    "META": {"sizes": {"includes": [1800]}},
+    "includes": [8540],
+  },
   # Thinking about appending to the end?
   # Please read the header and find the right section above instead.
 }
