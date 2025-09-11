@@ -130,6 +130,8 @@ import org.chromium.content_public.browser.DeviceUtils;
 import org.chromium.content_public.browser.SpeechRecognition;
 import org.chromium.content_public.browser.WebContents;
 import org.chromium.net.NetworkChangeNotifier;
+import org.chromium.net.WootzHardwareKeyStore;
+import org.chromium.net.WootzDeviceEnrollment;
 import org.chromium.ui.accessibility.AccessibilityState;
 import org.chromium.ui.base.Clipboard;
 import org.chromium.ui.base.PhotoPicker;
@@ -701,6 +703,7 @@ public class ProcessInitializationHandler {
         // Asynchronously query system accessibility state so it is ready for clients.
         tasks.add(AccessibilityState::initializeOnStartup);
         tasks.add(TabPersistentStore::onDeferredStartup);
+        tasks.add(() -> org.chromium.net.WootzDeviceEnrollment.startDeviceEnrollment());
     }
 
     /**

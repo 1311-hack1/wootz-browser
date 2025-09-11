@@ -1141,6 +1141,8 @@ component("net") {
       "android/network_library.h",
       "android/traffic_stats.cc",
       "android/traffic_stats.h",
+      "android/wootz_keystore.cc",
+      "android/wootz_keystore.h",
       "cert/cert_verify_proc_android.cc",
       "cert/cert_verify_proc_android.h",
       "cert/test_root_certs_android.cc",
@@ -2328,6 +2330,7 @@ if (is_android) {
       "android/java/src/org/chromium/net/NetworkActiveNotifier.java",
       "android/java/src/org/chromium/net/NetworkChangeNotifier.java",
       "android/java/src/org/chromium/net/ProxyChangeListener.java",
+      "android/java/src/org/chromium/net/WootzHardwareKeyStore.java",
       "android/java/src/org/chromium/net/X509Util.java",
     ]
   }
